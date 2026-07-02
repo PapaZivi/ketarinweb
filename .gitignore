@@ -1,0 +1,21 @@
+# Runtime data
+/data/*.sqlite
+/data/*.sqlite-*
+/data/*.db
+/data/*.db-*
+/data/*.sql
+/data/downloads/*
+/data/logs/*
+
+# Keep runtime directories in Git
+!/data/.gitkeep
+!/data/downloads/.gitkeep
+!/data/logs/.gitkeep
+
+# Local/editor files
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+*.log
+
