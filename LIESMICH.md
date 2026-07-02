@@ -1,4 +1,4 @@
-﻿# KetarinWeb
+# KetarinWeb
 
 KetarinWeb ist eine kleine Webanwendung als Linux-tauglicher Ersatz für
 Ketarin. Sie prüft Webseiten oder APIs auf neue Programmversionen, speichert
