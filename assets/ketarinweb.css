@@ -86,6 +86,9 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
 .kw-window fieldset { border-top: 1px solid #bbb; margin-top: 8px; padding-top: 8px; }
 .kw-window fieldset.disabled { opacity: .45; }
 .kw-window legend { width: auto; padding-right: 8px; color: #7a9fd0; font-size: 12px; }
+.kw-url-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.kw-url-row label { margin-bottom: 0; }
+.kw-variables-button { box-sizing: border-box; padding-left: 10px; padding-right: 10px; text-align: center; white-space: nowrap; }
 .kw-window-actions { padding: 16px 14px 12px; text-align: right; }
 .kw-window-actions .btn { min-width: 74px; margin-left: 8px; }
 .kw-about-window { width: 430px; }
