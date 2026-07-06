@@ -239,12 +239,17 @@ final class AppRepository
 
     public function markResult(int $id, string $version, string $url, string $target, string $status, bool $touchLastUpdated): void
     {
+        $now = Support::now();
         $this->database->pdo()->prepare('
             UPDATE apps SET current_version = ?, current_download_url = ?, current_target_path = ?,
-                last_checked = ?, last_updated = CASE WHEN ? = 1 OR last_updated IS NULL THEN ? ELSE last_updated END,
+                last_checked = ?,
+                last_updated = CASE
+                    WHEN ? IN ("downloaded", "update-found") OR ? = 1 OR last_updated IS NULL OR last_updated = "" THEN ?
+                    ELSE last_updated
+                END,
                 status = ?, error = "", download_bytes = 0, download_total = 0, download_updated_at = NULL, updated_at = ?
             WHERE id = ?
-        ')->execute([$version, $url, $target, Support::now(), $touchLastUpdated ? 1 : 0, Support::now(), $status, Support::now(), $id]);
+        ')->execute([$version, $url, $target, $now, $status, $touchLastUpdated ? 1 : 0, $now, $status, $now, $id]);
     }
 
     public function setImportedLastUpdated(int $id, string $lastUpdated): void

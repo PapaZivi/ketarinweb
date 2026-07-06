@@ -29,8 +29,13 @@ final class Mailer
             if (($result['status'] ?? '') === 'update-found') {
                 $body .= "  Action: notification without download\n";
             }
-            if (!empty($result['version'])) {
-                $body .= '  Version: ' . $result['version'] . "\n";
+            $oldVersion = (string)($result['old_version'] ?? '');
+            $newVersion = (string)($result['version'] ?? '');
+            if ($oldVersion !== '' && $newVersion !== '' && $oldVersion !== $newVersion) {
+                $body .= '  Old version: ' . $oldVersion . "\n";
+                $body .= '  New version: ' . $newVersion . "\n";
+            } elseif ($newVersion !== '') {
+                $body .= '  Version: ' . $newVersion . "\n";
             }
             if (!empty($result['url'])) {
                 $body .= '  URL: ' . $result['url'] . "\n";

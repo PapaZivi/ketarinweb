@@ -25,6 +25,7 @@ final class Updater
             $this->requestOptions = $this->requestOptions($app);
             $values = $this->resolveVariables((int)$app['id'], $this->requiredVariableRoots($app));
             $indicatorName = (string)($app['change_indicator'] ?? 'version') ?: 'version';
+            $oldVersion = (string)($app['current_version'] ?? '');
             $version = (string)($values[$indicatorName] ?? '');
             $notifyOnly = (string)($app['update_mode'] ?? 'download') === 'notify';
             $checkOnly = !empty($app['check_only']);
@@ -53,7 +54,7 @@ final class Updater
             }
             $touchLastUpdated = $status === 'downloaded' || ($changed && ($notifyOnly || $checkOnly || !$download));
             $this->apps->markResult((int)$app['id'], $version, $url, $target, $status, $touchLastUpdated);
-            return ['status' => $status, 'message' => $this->resultMessage((string)$app['name'], $status, $checkOnly || $notifyOnly || !$download), 'target' => $target, 'url' => $url, 'version' => $version];
+            return ['status' => $status, 'message' => $this->resultMessage((string)$app['name'], $status, $checkOnly || $notifyOnly || !$download), 'target' => $target, 'url' => $url, 'version' => $version, 'old_version' => $oldVersion];
         } catch (Throwable $e) {
             $this->apps->markError((int)$app['id'], $e->getMessage());
             throw new RuntimeException($app['name'] . ': ' . $e->getMessage(), 0, $e);
