@@ -34,6 +34,7 @@
     "table.version": "Version",
     "table.never": "Never",
     "table.empty": "No applications yet.",
+    "table.just_notify": "just notify",
     "hint.selection_default": "Double-click to edit, right-click for actions. Ctrl/Shift for multi-selection.",
     "hint.selection_count": "{count} selected. Ctrl/Shift for multi-selection.",
     "hint.action_running": "Action is running in the background...",

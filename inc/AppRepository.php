@@ -302,7 +302,7 @@ final class AppRepository
     public function progressSnapshot(): array
     {
         return $this->database->pdo()->query('
-            SELECT id, status, error, download_bytes, download_total, current_version, target_path, current_target_path, last_checked, last_updated, category
+            SELECT id, status, error, download_bytes, download_total, current_version, target_path, current_target_path, update_mode, last_checked, last_updated, category
             FROM apps
             ORDER BY id
         ')->fetchAll(PDO::FETCH_ASSOC);

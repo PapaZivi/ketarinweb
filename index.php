@@ -164,6 +164,7 @@ $jsI18n = $i18n->subset([
     'hint.action_completed',
     'hint.action_failed',
     'confirm.delete_selected',
+    'table.just_notify',
     'js.no_bash_script',
     'js.updating',
     'js.download',
@@ -251,6 +252,7 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
                 <th data-col="target"><?= $sortLink('target', $t('table.target')) ?></th>
                 <th data-col="category"><?= $sortLink('category', $t('table.category')) ?></th>
                 <th data-col="version"><?= $sortLink('version', $t('table.version')) ?></th>
+                <th data-col="command">C</th>
             </tr>
             </thead>
             <tbody>
@@ -258,20 +260,24 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
                 <?php $displayUpdated = $app['last_updated'] ?: ''; ?>
                 <?php $group = $displayUpdated ? date('d.m.Y', strtotime($displayUpdated)) : $t('table.never'); ?>
                 <?php if ($showDateGroups && $group !== $lastGroup): $lastGroup = $group; ?>
-                    <tr class="kw-date-row"><td colspan="6"><?= Support::h($group) ?></td></tr>
+                    <tr class="kw-date-row"><td colspan="7"><?= Support::h($group) ?></td></tr>
                 <?php endif; ?>
                 <?php $statusIcon = $app['error'] ? 'error' : (string)$app['status']; ?>
+                <?php $hasCommandScript = trim((string)($app['command_script'] ?? '')) !== ''; ?>
+                <?php $commandEnabled = $hasCommandScript && !empty($app['command_enabled']); ?>
                 <tr class="kw-app-row <?= $app['enabled'] ? '' : 'kw-app-disabled' ?>" data-id="<?= (int)$app['id'] ?>" data-edit="index.php?edit=<?= (int)$app['id'] ?>" data-vars="index.php?variables=<?= (int)$app['id'] ?>" data-command="<?= !empty($app['command_enabled']) && trim((string)($app['command_script'] ?? '')) !== '' ? '1' : '0' ?>" data-website="<?= Support::h($app['website'] ?? '') ?>">
                     <td><span class="kw-status kw-status-<?= Support::h($statusIcon) ?>" data-status-icon></span><?= Support::h($app['name']) ?></td>
                     <td data-updated-cell><?= $displayUpdated ? Support::h(date('d.m.Y H:i', strtotime($displayUpdated))) : '' ?></td>
                     <td data-progress-cell><?= Support::h($app['error'] ?: $app['status']) ?></td>
-                    <td data-target-cell><?= Support::h($app['current_target_path'] ?: $app['target_path']) ?></td>
+                    <?php $targetText = ($app['update_mode'] ?? 'download') === 'notify' ? $t('table.just_notify') : ($app['current_target_path'] ?: $app['target_path']); ?>
+                    <td data-target-cell><?= Support::h($targetText) ?></td>
                     <td data-category-cell><?= Support::h($app['category']) ?></td>
                     <td data-version-cell><?= Support::h($app['current_version']) ?></td>
+                    <td class="kw-command-cell"><?php if ($hasCommandScript): ?><span class="kw-command-icon <?= $commandEnabled ? 'kw-command-icon-enabled' : '' ?>" title="<?= Support::h($commandEnabled ? 'Command enabled' : 'Command configured') ?>"></span><?php endif; ?></td>
                 </tr>
             <?php endforeach; ?>
             <?php if (!$apps): ?>
-                <tr><td colspan="6" class="kw-empty"><?= Support::h($t('table.empty')) ?></td></tr>
+                <tr><td colspan="7" class="kw-empty"><?= Support::h($t('table.empty')) ?></td></tr>
             <?php endif; ?>
             </tbody>
         </table>

@@ -27,6 +27,11 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
 .kw-table th:nth-child(3) { width: 100px; }
 .kw-table th:nth-child(5) { width: 86px; }
 .kw-table th:nth-child(6) { width: 84px; }
+.kw-table th:nth-child(7) { width: 34px; text-align: center; }
+.kw-command-cell { text-align: center; padding-left: 2px; padding-right: 2px; }
+.kw-command-icon { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #6f7883; background: #f8fafc; vertical-align: -2px; position: relative; }
+.kw-command-icon-enabled { background: #438b46; border-color: #2c6f31; }
+.kw-command-icon-enabled::after { content: ""; position: absolute; left: 3px; top: 2px; width: 6px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .kw-date-row td { color: #006bd6; border-top: 1px solid #b6c7ee; padding-top: 8px; }
 .kw-app-row { cursor: default; }
 .kw-app-row:hover, .kw-app-row.selected { background: #dbeafe; outline: 1px solid #7aa7e6; }

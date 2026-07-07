@@ -34,6 +34,7 @@
     "table.version": "Version",
     "table.never": "Noch nie",
     "table.empty": "Noch keine Anwendungen vorhanden.",
+    "table.just_notify": "Nur Benachrichtigung",
     "hint.selection_default": "Doppelklick zum Bearbeiten, Rechtsklick für Aktionen. Strg/Umschalt für Mehrfachauswahl.",
     "hint.selection_count": "{count} ausgewählt. Strg/Umschalt für Mehrfachauswahl.",
     "hint.action_running": "Aktion läuft im Hintergrund...",

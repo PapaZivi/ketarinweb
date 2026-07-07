@@ -289,7 +289,7 @@
             }
             var targetCell = row.querySelector('[data-target-cell]');
             if (targetCell) {
-                targetCell.textContent = app.current_target_path || app.target_path || '';
+                targetCell.textContent = app.update_mode === 'notify' ? t('table.just_notify') : (app.current_target_path || app.target_path || '');
                 targetCell.removeAttribute('title');
             }
             var categoryCell = row.querySelector('[data-category-cell]');
