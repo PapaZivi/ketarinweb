@@ -41,6 +41,8 @@
     "hint.action_completed": "Aktion abgeschlossen. Status wird aktualisiert.",
     "hint.action_failed": "Aktion fehlgeschlagen: {message}",
     "toast.error": "Fehler",
+    "write_warning.title": "Schreibrechte fehlen",
+    "write_warning.text": "KetarinWeb benötigt Schreibrechte für diese Pfade:",
     "flash.application_saved": "Anwendung gespeichert.",
     "flash.settings_saved": "Einstellungen gespeichert.",
     "flash.testmail_sent": "Testmail gesendet.",

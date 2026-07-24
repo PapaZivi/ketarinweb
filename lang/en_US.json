@@ -41,6 +41,8 @@
     "hint.action_completed": "Action completed. Status will refresh.",
     "hint.action_failed": "Action failed: {message}",
     "toast.error": "Error",
+    "write_warning.title": "Write access missing",
+    "write_warning.text": "KetarinWeb needs write access to these paths:",
     "flash.application_saved": "Application saved.",
     "flash.settings_saved": "Settings saved.",
     "flash.testmail_sent": "Test mail sent.",

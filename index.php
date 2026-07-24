@@ -155,6 +155,7 @@ $varId = isset($_GET['variables']) ? (int)$_GET['variables'] : 0;
 $sort = (string)($_GET['sort'] ?? 'date');
 $direction = strtolower((string)($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 $apps = $repository->all($sort, $direction);
+$writableIssues = RuntimeRequirements::writableIssues($apps);
 $flash = $flashBag->pull();
 $languages = I18n::available();
 $jsI18n = $i18n->subset([
@@ -220,6 +221,17 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
 </nav>
 
 <main class="kw-shell">
+    <?php if ($writableIssues): ?>
+        <section class="kw-write-warning" role="alert">
+            <strong><?= Support::h($t('write_warning.title')) ?></strong>
+            <span><?= Support::h($t('write_warning.text')) ?></span>
+            <ul>
+                <?php foreach ($writableIssues as $issue): ?>
+                    <li><code><?= Support::h($issue['path']) ?></code> <small><?= Support::h($issue['label']) ?>: <?= Support::h($issue['message']) ?></small></li>
+                <?php endforeach; ?>
+            </ul>
+        </section>
+    <?php endif; ?>
     <section class="kw-commandbar">
         <div>
             <strong><?= Support::h($t('toolbar.applications')) ?></strong>

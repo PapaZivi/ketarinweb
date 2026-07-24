@@ -9,6 +9,13 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
 .kw-menu-popup a, .kw-menu-popup button { display: block; width: 100%; border: 0; background: transparent; color: #000; text-align: left; padding: 5px 24px; font: inherit; text-decoration: none; }
 .kw-menu-popup a:hover, .kw-menu-popup button:hover { background: #dbeafe; }
 .kw-shell { height: calc(100vh - 56px); display: flex; flex-direction: column; padding: 10px; gap: 8px; }
+.kw-write-warning { background: #fff7e0; border: 1px solid #d2a73d; box-shadow: 0 1px 2px rgba(0,0,0,.08); padding: 7px 9px; color: #3c2a00; }
+.kw-write-warning strong { display: block; margin-bottom: 2px; font-size: 13px; }
+.kw-write-warning span { display: block; margin-bottom: 4px; }
+.kw-write-warning ul { margin: 0; padding-left: 18px; max-height: 120px; overflow: auto; }
+.kw-write-warning li { margin: 2px 0; }
+.kw-write-warning code { color: #000; background: rgba(255,255,255,.7); padding: 1px 4px; }
+.kw-write-warning small { color: #5e4a16; }
 .kw-commandbar { min-height: 42px; background: #f7f9fc; border: 1px solid #aeb8c6; box-shadow: 0 1px 2px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; }
 .kw-commandbar strong { font-size: 13px; }
 .kw-commandbar span { margin-left: 8px; color: #5c6470; }
