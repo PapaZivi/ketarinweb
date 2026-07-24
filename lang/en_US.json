@@ -156,7 +156,7 @@
     "context.update": "Update",
     "context.check": "Check for update",
     "context.force": "Force download",
-    "context.commands": "Commands",
+    "context.commands": "Run commands",
     "context.visit": "Visit App-Website",
     "context.edit": "Edit",
     "context.delete": "Delete",
