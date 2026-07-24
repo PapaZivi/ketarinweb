@@ -91,6 +91,10 @@ final class AppRepository
             throw new RuntimeException('Name is missing.');
         }
         if ($id > 0) {
+            $existing = $this->find($id);
+            $targetChanged = $existing !== null
+                && ((string)($existing['target_path'] ?? '') !== $params[4]
+                    || (string)($existing['target_type'] ?? 'file') !== $params[5]);
             $params[] = $id;
             $this->database->pdo()->prepare('
                 UPDATE apps SET name = ?, category = ?, enabled = ?, download_url_template = ?,
@@ -99,6 +103,9 @@ final class AppRepository
                     command_enabled = ?, command_script = ?, updated_at = ?
                 WHERE id = ?
             ')->execute($params);
+            if ($targetChanged) {
+                $this->database->pdo()->prepare('UPDATE apps SET current_target_path = "" WHERE id = ?')->execute([$id]);
+            }
             return $id;
         }
         $this->database->pdo()->prepare('
@@ -302,7 +309,7 @@ final class AppRepository
     public function progressSnapshot(): array
     {
         return $this->database->pdo()->query('
-            SELECT id, status, error, download_bytes, download_total, current_version, target_path, current_target_path, update_mode, last_checked, last_updated, category
+            SELECT id, status, error, download_bytes, download_total, current_version, target_path, target_type, current_target_path, update_mode, last_checked, last_updated, category
             FROM apps
             ORDER BY id
         ')->fetchAll(PDO::FETCH_ASSOC);

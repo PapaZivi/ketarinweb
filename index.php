@@ -269,7 +269,7 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
                     <td><span class="kw-status kw-status-<?= Support::h($statusIcon) ?>" data-status-icon></span><?= Support::h($app['name']) ?></td>
                     <td data-updated-cell><?= $displayUpdated ? Support::h(date('d.m.Y H:i', strtotime($displayUpdated))) : '' ?></td>
                     <td data-progress-cell><?= Support::h($app['error'] ?: $app['status']) ?></td>
-                    <?php $targetText = ($app['update_mode'] ?? 'download') === 'notify' ? $t('table.just_notify') : ($app['current_target_path'] ?: $app['target_path']); ?>
+                    <?php $targetText = ($app['update_mode'] ?? 'download') === 'notify' ? $t('table.just_notify') : ((($app['target_type'] ?? 'file') === 'folder' && $app['current_target_path']) ? $app['current_target_path'] : $app['target_path']); ?>
                     <td data-target-cell><?= Support::h($targetText) ?></td>
                     <td data-category-cell><?= Support::h($app['category']) ?></td>
                     <td data-version-cell><?= Support::h($app['current_version']) ?></td>
