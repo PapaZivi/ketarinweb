@@ -4,6 +4,7 @@
     var selectedIds = new Set();
     var lastSelectedRow = null;
     var menu = document.getElementById('contextMenu');
+    var locked = document.body && document.body.dataset.authenticated === '0';
     var table = document.getElementById('appTable');
     var bulkDeleteIds = document.getElementById('bulkDeleteIds');
     var bulkDeleteButton = document.getElementById('bulkDeleteButton');
@@ -126,19 +127,23 @@
         setupCellTooltips(table);
         setupProgressPolling(table);
         table.addEventListener('mousedown', function (event) {
+            if (locked) return;
             if (event.target.closest('.kw-app-row')) {
                 event.preventDefault();
             }
         });
         table.addEventListener('click', function (event) {
+            if (locked) return;
             var row = event.target.closest('.kw-app-row');
             if (row) selectRow(row, event);
         });
         table.addEventListener('dblclick', function (event) {
+            if (locked) return;
             var row = event.target.closest('.kw-app-row');
             if (row) window.location = row.getAttribute('data-edit');
         });
         table.addEventListener('contextmenu', function (event) {
+            if (locked) return;
             var row = event.target.closest('.kw-app-row');
             if (!row || !menu) return;
             event.preventDefault();
@@ -474,6 +479,136 @@
             root.querySelectorAll('.kw-regex-line').forEach(updateRegexFlagControl);
         }
 
+        function escapeHtml(value) {
+            return String(value).replace(/[&<>"']/g, function (char) {
+                return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char];
+            });
+        }
+
+        function addLiteralRanges(content, needle, ranges) {
+            if (!needle) return;
+            var index = content.indexOf(needle);
+            while (index !== -1) {
+                ranges.push({start: index, end: index + needle.length, type: 'search'});
+                index = content.indexOf(needle, index + Math.max(1, needle.length));
+            }
+        }
+
+        function addRegexRanges(content, pattern, flags, ranges) {
+            if (!pattern) return;
+            try {
+                var global = flags.indexOf('g') !== -1;
+                var jsFlags = global ? 'g' : '';
+                if (flags.indexOf('i') !== -1) jsFlags += 'i';
+                if (flags.indexOf('m') !== -1) jsFlags += 'm';
+                if (flags.indexOf('s') !== -1) jsFlags += 's';
+                var regex = new RegExp(pattern, jsFlags);
+                var match;
+                while ((match = regex.exec(content)) !== null) {
+                    var value = match[0] || '';
+                    if (value === '') {
+                        if (!global) break;
+                        regex.lastIndex += 1;
+                        continue;
+                    }
+                    var groups = [];
+                    var groupOffset = 0;
+                    for (var groupIndex = 1; groupIndex < match.length; groupIndex++) {
+                        var groupValue = match[groupIndex];
+                        if (!groupValue) continue;
+                        var relativeStart = value.indexOf(groupValue, groupOffset);
+                        if (relativeStart === -1) {
+                            relativeStart = value.indexOf(groupValue);
+                        }
+                        if (relativeStart === -1) continue;
+                        groups.push({start: match.index + relativeStart, end: match.index + relativeStart + groupValue.length});
+                        groupOffset = relativeStart + groupValue.length;
+                    }
+                    ranges.push({start: match.index, end: match.index + value.length, type: 'regex', groups: groups});
+                    if (!global) break;
+                }
+            } catch (ignore) {}
+        }
+
+        function renderMarkedRange(content, range) {
+            if (!range.groups || range.groups.length === 0) {
+                return '<mark class="kw-highlight-' + range.type + '">' + escapeHtml(content.slice(range.start, range.end)) + '</mark>';
+            }
+            var html = '<mark class="kw-highlight-' + range.type + '">';
+            var offset = range.start;
+            range.groups.sort(function (a, b) { return a.start - b.start || b.end - a.end; }).forEach(function (group) {
+                if (group.start < offset || group.end > range.end || group.end <= group.start) return;
+                html += escapeHtml(content.slice(offset, group.start));
+                html += '<mark class="kw-highlight-group">' + escapeHtml(content.slice(group.start, group.end)) + '</mark>';
+                offset = group.end;
+            });
+            html += escapeHtml(content.slice(offset, range.end));
+            html += '</mark>';
+            return html;
+        }
+        function renderHighlight(row) {
+            var textarea = row.querySelector('textarea[name="variables[text_value][]"]');
+            var preview = row.querySelector('[data-variable-highlight]');
+            if (!textarea || !preview) return;
+            var content = textarea.value || '';
+            var search = (row.querySelector('input[name="variables[search][]"]') || {}).value || '';
+            var regex = (row.querySelector('input[name="variables[regex][]"]') || {}).value || '';
+            var flags = (row.querySelector('[data-regex-flags-value]') || {}).value || '';
+            var ranges = [];
+            addLiteralRanges(content, search, ranges);
+            addRegexRanges(content, regex, flags, ranges);
+            ranges.sort(function (a, b) { return a.start - b.start || b.end - a.end; });
+            ranges = ranges.filter(function (range, index) {
+                return range.end > range.start && !ranges.slice(0, index).some(function (previous) {
+                    return range.start >= previous.start && range.end <= previous.end;
+                });
+            }).slice(0, 30);
+            if (content === '' || ranges.length === 0) {
+                preview.hidden = true;
+                preview.innerHTML = '';
+                return;
+            }
+            preview.hidden = false;
+            preview.innerHTML = ranges.map(function (range) {
+                var context = 180;
+                var start = Math.max(0, range.start - context);
+                var end = Math.min(content.length, range.end + context);
+                var before = (start > 0 ? '...' : '') + content.slice(start, range.start);
+                var match = content.slice(range.start, range.end);
+                var after = content.slice(range.end, end) + (end < content.length ? '...' : '');
+                return '<span class="kw-highlight-snippet">' + escapeHtml(before)
+                    + renderMarkedRange(content, range)
+                    + escapeHtml(after) + '</span>';
+            }).join('\n\n');
+        }
+
+        function fetchVariableContent(row, button) {
+            var appId = document.querySelector('input[name="app_id"]');
+            var url = row.querySelector('[data-variable-url]');
+            var postData = row.querySelector('textarea[name="variables[post_data][]"]');
+            var textarea = row.querySelector('textarea[name="variables[text_value][]"]');
+            if (!appId || !url || !textarea || url.value.trim() === '') return;
+            var originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = t('variables.fetching');
+            var data = new FormData();
+            data.append('action', 'fetch_variable_content');
+            data.append('app_id', appId.value);
+            data.append('url', url.value.trim());
+            data.append('post_data', postData ? postData.value : '');
+            fetch('index.php', {method: 'POST', body: data})
+                .then(function (response) { return response.json().then(function (json) { return {ok: response.ok, json: json}; }); })
+                .then(function (result) {
+                    if (!result.ok || result.json.error) throw new Error(result.json.error || 'Fetch failed.');
+                    textarea.value = result.json.content || '';
+                    renderHighlight(row);
+                })
+                .catch(function (error) { window.alert(error.message); })
+                .finally(function () {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                });
+        }
         function selectVariable(index) {
             var currentRows = rows();
             if (!currentRows.length) return;
@@ -505,6 +640,10 @@
             if (event.target.matches('input[name="variables[name][]"]')) {
                 renderList();
             }
+            var row = event.target.closest('[data-var-row]');
+            if (row && event.target.matches('input[name="variables[search][]"], input[name="variables[regex][]"], textarea[name="variables[text_value][]"]')) {
+                renderHighlight(row);
+            }
         });
         wrap.addEventListener('change', function (event) {
             var select = event.target.closest('[data-var-kind]');
@@ -514,7 +653,15 @@
             var flagControl = event.target.closest('.kw-regex-line');
             if (flagControl && event.target.matches('.kw-regex-flags input[type="checkbox"]')) {
                 updateRegexFlagControl(flagControl);
+                var row = flagControl.closest('[data-var-row]');
+                if (row) renderHighlight(row);
             }
+        });
+        wrap.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-fetch-variable-url]');
+            if (!button) return;
+            event.preventDefault();
+            fetchVariableContent(button.closest('[data-var-row]'), button);
         });
 
         if (add) {
@@ -724,6 +871,7 @@
     var aboutDialog = document.getElementById('aboutDialog');
     var documentationDialog = document.getElementById('documentationDialog');
     var settingsDialog = document.getElementById('settingsDialog');
+    var loginDialog = document.getElementById('loginDialog');
     document.querySelectorAll('[data-open-documentation]').forEach(function (button) {
         button.addEventListener('click', function () {
             closeWindowMenus();
@@ -760,6 +908,32 @@
             if (settingsDialog) settingsDialog.hidden = true;
         });
     });
+    document.querySelectorAll('[data-open-login]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            closeWindowMenus();
+            if (loginDialog) {
+                loginDialog.hidden = false;
+                var password = loginDialog.querySelector('input[type="password"]');
+                if (password) password.focus();
+            }
+        });
+    });
+    document.querySelectorAll('[data-close-login]').forEach(function (button) {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            if (loginDialog) loginDialog.hidden = true;
+        });
+    });
+    (function setupLoginSettings() {
+        var checkbox = document.querySelector('[data-login-enabled-setting]');
+        var fields = document.querySelector('[data-login-password-fields]');
+        if (!checkbox || !fields) return;
+        function update() {
+            fields.hidden = !checkbox.checked;
+        }
+        checkbox.addEventListener('change', update);
+        update();
+    })();
     (function setupTestmailButton() {
         var button = document.getElementById('sendTestmailButton');
         var to = document.getElementById('emailTo');
@@ -824,7 +998,7 @@
     document.addEventListener('keydown', function (event) {
         var active = document.activeElement;
         var isTyping = active && active.matches && active.matches('input, textarea, select, [contenteditable="true"]');
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && !isTyping) {
+        if (!locked && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a' && !isTyping) {
             event.preventDefault();
             selectAllRows();
             return;

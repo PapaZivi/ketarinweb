@@ -13,6 +13,37 @@ $settings = $settingsRepository->all();
 $i18n = new I18n($settings['language']);
 $t = static fn (string $key, array $replace = []): string => $i18n->t($key, $replace);
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
+$loginConfigured = !empty($settings['login_enabled']);
+$isAuthenticated = !$loginConfigured || !empty($_SESSION['kw_authenticated']);
+$isLocked = $loginConfigured && !$isAuthenticated;
+
+if ($action === 'login') {
+    $password = (string)($_POST['password'] ?? '');
+    if ($loginConfigured && password_verify($password, (string)$settings['login_password_hash'])) {
+        $_SESSION['kw_authenticated'] = true;
+        $flashBag->set($t('flash.login_success'));
+    } else {
+        $flashBag->set($t('flash.login_failed'), 'danger');
+    }
+    Support::redirect('index.php');
+}
+
+if ($action === 'logout') {
+    unset($_SESSION['kw_authenticated']);
+    $flashBag->set($t('flash.logout_success'));
+    Support::redirect('index.php');
+}
+
+if ($isLocked && $action !== '' && $action !== 'progress') {
+    if (in_array($action, ['browse_path', 'bookmark_add', 'bookmark_delete', 'download_command_log'], true)) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['error' => $t('auth.login_required')], JSON_THROW_ON_ERROR);
+        exit;
+    }
+    $flashBag->set($t('auth.login_required'), 'danger');
+    Support::redirect('index.php');
+}
 
 if ($action === 'browse_path') {
     header('Content-Type: application/json; charset=utf-8');
@@ -40,6 +71,29 @@ if ($action === 'bookmark_delete') {
     header('Content-Type: application/json; charset=utf-8');
     try {
         echo json_encode(['bookmarks' => (new FileBrowser($database))->deleteBookmark((int)($_POST['id'] ?? 0))], JSON_THROW_ON_ERROR);
+    } catch (Throwable $e) {
+        http_response_code(400);
+        echo json_encode(['error' => $e->getMessage()], JSON_THROW_ON_ERROR);
+    }
+    exit;
+}
+
+if ($action === 'fetch_variable_content') {
+    header('Content-Type: application/json; charset=utf-8');
+    try {
+        $app = $repository->find((int)($_POST['app_id'] ?? 0));
+        if (!$app) {
+            throw new RuntimeException('Application not found.');
+        }
+        $url = trim((string)($_POST['url'] ?? ''));
+        if ($url === '') {
+            throw new RuntimeException('URL is missing.');
+        }
+        $content = (new HttpClient())->request($url, (string)($_POST['post_data'] ?? ''), [
+            'referer' => (string)($app['http_referer'] ?? ''),
+            'user_agent' => (string)($app['http_user_agent'] ?? ''),
+        ]);
+        echo json_encode(['content' => $content], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } catch (Throwable $e) {
         http_response_code(400);
         echo json_encode(['error' => $e->getMessage()], JSON_THROW_ON_ERROR);
@@ -76,6 +130,10 @@ try {
     }
     if ($action === 'save_settings') {
         $settingsRepository->save($_POST['settings'] ?? []);
+        $savedSettings = $settingsRepository->all();
+        if (!empty($savedSettings['login_enabled'])) {
+            unset($_SESSION['kw_authenticated']);
+        }
         $savedI18n = new I18n((string)(($_POST['settings'] ?? [])['language'] ?? $settings['language']));
         $flashBag->set($savedI18n->t('flash.settings_saved'));
         Support::redirect('index.php');
@@ -150,8 +208,8 @@ try {
     Support::redirect();
 }
 
-$editId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
-$varId = isset($_GET['variables']) ? (int)$_GET['variables'] : 0;
+$editId = $isAuthenticated && isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
+$varId = $isAuthenticated && isset($_GET['variables']) ? (int)$_GET['variables'] : 0;
 $sort = (string)($_GET['sort'] ?? 'date');
 $direction = strtolower((string)($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 $apps = $repository->all($sort, $direction);
@@ -196,15 +254,15 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
     <link rel="stylesheet" href="../css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/ketarinweb.css">
 </head>
-<body data-file-browser-action="<?= Support::h($settings['file_browser_action']) ?>">
+<body data-file-browser-action="<?= Support::h($settings['file_browser_action']) ?>" data-authenticated="<?= $isAuthenticated ? '1' : '0' ?>" data-login-enabled="<?= $loginConfigured ? '1' : '0' ?>">
 <header class="kw-titlebar">
     <span class="kw-appdot"></span>
     <strong>KetarinWeb</strong>
 </header>
 <nav class="kw-menu">
-    <button type="button" data-menu="file"><?= Support::h($t('menu.file')) ?></button>
-    <button type="button" data-menu="import"><?= Support::h($t('menu.import')) ?></button>
-    <button type="button" data-menu="help"><?= Support::h($t('menu.help')) ?></button>
+    <button type="button" data-menu="file" <?= $isLocked ? 'disabled aria-disabled="true"' : '' ?>><?= Support::h($t('menu.file')) ?></button>
+    <button type="button" data-menu="import" <?= $isLocked ? 'disabled aria-disabled="true"' : '' ?>><?= Support::h($t('menu.import')) ?></button>
+    <button type="button" data-menu="help" <?= $isLocked ? 'disabled aria-disabled="true"' : '' ?>><?= Support::h($t('menu.help')) ?></button>
     <div class="kw-menu-popup" id="menu-file" hidden>
         <a href="index.php?edit=0"><?= Support::h($t('menu.new_application')) ?></a>
         <button type="submit" form="runAllForm"><?= Support::h($t('menu.update_all')) ?></button>
@@ -218,10 +276,19 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
         <button type="button" data-open-documentation><?= Support::h($t('menu.documentation')) ?></button>
         <button type="button" data-open-about><?= Support::h($t('menu.about')) ?></button>
     </div>
+    <?php if ($loginConfigured): ?>
+        <div class="kw-auth-menu">
+            <?php if ($isAuthenticated): ?>
+                <form method="post"><button name="action" value="logout" type="submit"><?= Support::h($t('auth.logout')) ?></button></form>
+            <?php else: ?>
+                <button type="button" data-open-login><?= Support::h($t('auth.login')) ?></button>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </nav>
 
 <main class="kw-shell">
-    <?php if ($writableIssues): ?>
+    <?php if ($isAuthenticated && $writableIssues): ?>
         <section class="kw-write-warning" role="alert">
             <strong><?= Support::h($t('write_warning.title')) ?></strong>
             <span><?= Support::h($t('write_warning.text')) ?></span>
@@ -237,6 +304,7 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
             <strong><?= Support::h($t('toolbar.applications')) ?></strong>
             <span><?= count($apps) ?> <?= Support::h($t('toolbar.entries')) ?></span>
         </div>
+        <?php if ($isAuthenticated): ?>
         <div>
             <a class="btn btn-sm btn-primary" href="index.php?edit=0"><?= Support::h($t('button.add_application')) ?></a>
             <form method="post" class="d-inline" id="runAllForm"><input type="hidden" name="action" value="run_all"><button class="btn btn-sm btn-outline-primary" type="submit"><?= Support::h($t('button.update_all')) ?></button></form>
@@ -252,6 +320,7 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
             </form>
             <button class="btn btn-sm btn-outline-secondary" data-toggle-panel="#importBox" type="button"><?= Support::h($t('button.import')) ?></button>
         </div>
+        <?php endif; ?>
     </section>
 
     <section class="kw-grid">
@@ -323,7 +392,7 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
     <div class="kw-window kw-about-window">
         <div class="kw-window-title"><?= Support::h($t('dialog.about.title')) ?><a href="#" data-close-about>x</a></div>
         <div class="kw-about-body">
-            <h2>KetarinWeb</h2>
+            <h2>KetarinWeb <small><?= Support::h(KW_VERSION) ?></small></h2>
             <dl class="kw-about-list">
                 <dt><?= Support::h($t('about.original')) ?></dt>
                 <dd><a href="https://ketarin.org/" target="_blank" rel="noopener">ketarin.org</a></dd>
@@ -512,6 +581,7 @@ meta="$(dirname -- "{file}")/metadata.txt"
             <li class="nav-item"><button class="nav-link active" type="button" data-tab="emailsettings"><?= Support::h($t('settings.tab.email')) ?></button></li>
             <li class="nav-item"><button class="nav-link" type="button" data-tab="filesettings"><?= Support::h($t('settings.tab.files')) ?></button></li>
             <li class="nav-item"><button class="nav-link" type="button" data-tab="languagesettings"><?= Support::h($t('settings.tab.language')) ?></button></li>
+            <li class="nav-item"><button class="nav-link" type="button" data-tab="securitysettings"><?= Support::h($t('settings.tab.security')) ?></button></li>
         </ul>
         <div class="kw-formbody kw-tab-pane active" data-pane="emailsettings">
             <div class="form-group">
@@ -549,11 +619,44 @@ meta="$(dirname -- "{file}")/metadata.txt"
                 </select>
             </div>
         </div>
+        <div class="kw-formbody kw-tab-pane" data-pane="securitysettings">
+            <div class="form-group form-check">
+                <input class="form-check-input" type="checkbox" id="loginEnabled" name="settings[login_enabled]" value="1" data-login-enabled-setting <?= !empty($settings['login_enabled']) ? 'checked' : '' ?>>
+                <label class="form-check-label" for="loginEnabled"><?= Support::h($t('settings.login_enabled')) ?></label>
+            </div>
+            <div data-login-password-fields>
+                <div class="form-group">
+                    <label for="loginPassword"><?= Support::h($t('settings.login_password')) ?></label>
+                    <input class="form-control form-control-sm" id="loginPassword" name="settings[login_password]" type="password" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="loginPasswordConfirm"><?= Support::h($t('settings.login_password_confirm')) ?></label>
+                    <input class="form-control form-control-sm" id="loginPasswordConfirm" name="settings[login_password_confirm]" type="password" autocomplete="new-password">
+                </div>
+                <p class="kw-muted"><?= Support::h($t('settings.login_hint')) ?></p>
+            </div>
+        </div>
         <div class="kw-window-actions"><button class="btn btn-primary btn-sm" type="submit"><?= Support::h($t('button.ok')) ?></button><button class="btn btn-light border btn-sm" type="button" data-close-settings><?= Support::h($t('button.cancel')) ?></button></div>
     </form>
 </div>
 
-<?php if ($editId || isset($_GET['edit'])): $app = $editApp ?: $newApp; $appVars = (int)$app['id'] > 0 ? $repository->variables((int)$app['id']) : []; $appVarNames = array_values(array_filter(array_map(static fn (array $var): string => (string)$var['name'], $appVars), static fn (string $name): bool => $name !== '')); $commandLog = (int)$app['id'] > 0 ? $repository->commandLog((int)$app['id']) : null; ?>
+<?php if ($loginConfigured && !$isAuthenticated): ?>
+<div class="kw-dialog" id="loginDialog" hidden>
+    <form method="post" class="kw-window kw-login-window">
+        <input type="hidden" name="action" value="login">
+        <div class="kw-window-title"><?= Support::h($t('auth.login')) ?><a href="#" data-close-login>x</a></div>
+        <div class="kw-formbody active">
+            <div class="form-group">
+                <label for="loginPasswordInput"><?= Support::h($t('auth.password')) ?></label>
+                <input class="form-control form-control-sm" id="loginPasswordInput" name="password" type="password" autocomplete="current-password" required>
+            </div>
+        </div>
+        <div class="kw-window-actions"><button class="btn btn-primary btn-sm" type="submit"><?= Support::h($t('auth.login')) ?></button><button class="btn btn-light border btn-sm" type="button" data-close-login><?= Support::h($t('button.cancel')) ?></button></div>
+    </form>
+</div>
+<?php endif; ?>
+
+<?php if ($isAuthenticated && ($editId || isset($_GET['edit']))): $app = $editApp ?: $newApp; $appVars = (int)$app['id'] > 0 ? $repository->variables((int)$app['id']) : []; $appVarNames = array_values(array_filter(array_map(static fn (array $var): string => (string)$var['name'], $appVars), static fn (string $name): bool => $name !== '')); $commandLog = (int)$app['id'] > 0 ? $repository->commandLog((int)$app['id']) : null; ?>
 <div class="kw-dialog">
     <form method="post" class="kw-window">
         <input type="hidden" name="action" value="save_app">
@@ -659,7 +762,7 @@ meta="$(dirname -- "{file}")/metadata.txt"
 </div>
 <?php endif; ?>
 
-<?php if ($varApp): $vars = $repository->variables((int)$varApp['id']); ?>
+<?php if ($isAuthenticated && $varApp): $vars = $repository->variables((int)$varApp['id']); ?>
 <div class="kw-dialog wide" data-close-url="index.php?edit=<?= (int)$varApp['id'] ?>">
     <form method="post" class="kw-window kw-variable-window">
         <input type="hidden" name="action" value="save_variables">
@@ -683,7 +786,7 @@ meta="$(dirname -- "{file}")/metadata.txt"
                         <div class="form-row mb-2">
                             <div class="col-sm-3"><input name="variables[name][]" class="form-control form-control-sm" value="<?= Support::h($var['name']) ?>"></div>
                             <div class="col-sm-3"><select name="variables[kind][]" class="form-control form-control-sm" data-var-kind><option value="regex" <?= $var['kind'] === 'regex' ? 'selected' : '' ?>><?= Support::h($t('variables.kind_regex')) ?></option><option value="startend" <?= $var['kind'] === 'startend' ? 'selected' : '' ?>><?= Support::h($t('variables.kind_startend')) ?></option><option value="text" <?= $var['kind'] === 'text' ? 'selected' : '' ?>><?= Support::h($t('variables.kind_text')) ?></option></select></div>
-                            <div class="col-sm-6 kw-var-mode kw-var-url"><input name="variables[url][]" class="form-control form-control-sm" placeholder="<?= Support::h($t('variables.contents_from_url')) ?>" value="<?= Support::h($var['url']) ?>"></div>
+                            <div class="col-sm-6 kw-var-mode kw-var-url"><div class="input-group input-group-sm"><input name="variables[url][]" class="form-control" data-variable-url placeholder="<?= Support::h($t('variables.contents_from_url')) ?>" value="<?= Support::h($var['url']) ?>"><div class="input-group-append"><button class="btn btn-light border" type="button" data-fetch-variable-url><?= Support::h($t('variables.fetch')) ?></button></div></div></div>
                         </div>
                         <input name="variables[search][]" class="form-control form-control-sm mb-1 kw-var-mode kw-var-regex" placeholder="<?= Support::h($t('variables.search_within')) ?>" value="<?= Support::h($var['search']) ?>">
                         <div class="form-row mb-1 kw-var-mode kw-var-startend">
@@ -705,6 +808,7 @@ meta="$(dirname -- "{file}")/metadata.txt"
                             </details>
                         </div>
                         <textarea name="variables[text_value][]" class="form-control form-control-sm mb-1 kw-var-mode kw-var-textarea" rows="6" placeholder="<?= Support::h($t('variables.kind_text')) ?>"><?= Support::h($var['text_value']) ?></textarea>
+                        <pre class="kw-variable-highlight" data-variable-highlight hidden></pre>
                         <textarea name="variables[post_data][]" class="form-control form-control-sm kw-var-mode kw-var-post" rows="1" placeholder="<?= Support::h($t('variables.post_data')) ?>"><?= Support::h($var['post_data']) ?></textarea>
                     </div>
                 </div>
@@ -739,9 +843,11 @@ meta="$(dirname -- "{file}")/metadata.txt"
     </div>
 </div>
 
+<?php if ($isAuthenticated): ?>
 <div id="contextMenu" class="kw-context">
     <form method="post"><input type="hidden" name="id"><button name="action" value="download"><?= Support::h($t('context.update')) ?></button><button name="action" value="check"><?= Support::h($t('context.check')) ?></button><button name="action" value="force"><?= Support::h($t('context.force')) ?></button><hr><button name="action" value="run_command" data-command-action><?= Support::h($t('context.commands')) ?></button><a data-website-action target="_new" rel="noopener"><?= Support::h($t('context.visit')) ?></a><hr><a data-cmd="edit"><strong><?= Support::h($t('context.edit')) ?></strong></a><button name="action" value="delete" onclick="return confirm('<?= Support::h($t('confirm.delete_application')) ?>')"><?= Support::h($t('context.delete')) ?></button></form>
 </div>
+<?php endif; ?>
 
 <script>
 window.KW_I18N = <?= json_encode($jsI18n, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;

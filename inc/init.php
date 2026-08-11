@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+const KW_VERSION = '2026.08';
 const KW_ROOT = __DIR__ . '/..';
 const KW_DATA = KW_ROOT . '/data';
 const KW_DB = KW_DATA . '/ketarinweb.sqlite';

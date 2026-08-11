@@ -200,3 +200,16 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
     .kw-browser-body { grid-template-columns: 1fr; }
     .kw-browser-bookmarks { max-height: 150px; }
 }
+.kw-auth-menu { float: right; margin-top: -1px; }
+.kw-auth-menu form { display: inline; margin: 0; }
+.kw-auth-menu button { border: 0; background: transparent; color: #000; padding: 3px 8px; font: inherit; }
+.kw-auth-menu button:hover { background: #dbeafe; outline: 1px solid #9abbe8; }
+.kw-menu > button:disabled { color: #8a8a8a; }
+.kw-menu > button:disabled:hover { background: transparent; outline: 0; }
+.kw-variable-highlight { min-height: 42px; max-height: 190px; overflow: auto; margin: 4px 0 6px; padding: 6px; white-space: pre-wrap; word-break: break-word; background: #fff; border: 1px solid #bfc7d1; font: 12px Consolas, 'Courier New', monospace; }
+.kw-variable-highlight mark { padding: 0 1px; }
+.kw-highlight-search { background: #fff59d; color: #000; }
+.kw-highlight-regex { background: #9fd3ff; color: #000; }
+.kw-highlight-group { background: #ffb86c; color: #000; border-bottom: 1px solid #b85b00; }
+.kw-highlight-snippet { display: block; padding: 3px 0; border-bottom: 1px solid #edf1f5; }
+.kw-highlight-snippet:last-child { border-bottom: 0; }
