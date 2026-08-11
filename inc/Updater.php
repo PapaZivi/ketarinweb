@@ -64,7 +64,9 @@ final class Updater
     public function runAll(bool $download = true, ?callable $onResult = null): array
     {
         $results = [];
-        foreach ($this->apps->enabledIds() as $id) {
+        $ids = $this->apps->enabledIds();
+        $this->apps->markUpdateRequested($ids);
+        foreach ($ids as $id) {
             try {
                 $result = $this->run((int)$id, $download);
             } catch (Throwable $e) {

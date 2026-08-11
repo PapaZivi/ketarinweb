@@ -287,6 +287,27 @@ final class AppRepository
             ->execute([$status, $error, Support::now(), $id]);
     }
 
+    public function markUpdateRequested(array $ids, bool $enabledOnly = true): void
+    {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', $ids),
+            static fn (int $id): bool => $id > 0,
+        )));
+        if ($ids === []) {
+            return;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $enabledCondition = $enabledOnly ? ' AND enabled = 1' : '';
+        $parameters = array_merge([Support::now()], $ids);
+        $this->database->pdo()->prepare("
+            UPDATE apps
+            SET status = 'update requested', error = '', download_bytes = 0, download_total = 0,
+                download_updated_at = NULL, updated_at = ?
+            WHERE id IN ($placeholders)$enabledCondition
+        ")->execute($parameters);
+    }
+
     public function markDownloadStarted(int $id, int $total = 0): void
     {
         $this->database->pdo()->prepare('

@@ -26,6 +26,9 @@ foreach (array_slice($argv, 1) as $arg) {
     }
 }
 $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn (int $id): bool => $id > 0)));
+if ($ids !== []) {
+    $repository->markUpdateRequested($ids, !$force);
+}
 
 $results = [];
 $lines = [];

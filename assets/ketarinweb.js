@@ -260,6 +260,9 @@
             var bytes = Number(app.download_bytes || 0);
             var total = Number(app.download_total || 0);
             if (app.status !== 'downloading') {
+                if (!app.error && app.status === 'update requested') return t('js.update_requested');
+                if (!app.error && app.status === 'updating') return t('js.updating');
+                if (!app.error && app.status === 'current') return t('status.current');
                 return status;
             }
             if (total > 0) {
@@ -367,7 +370,7 @@
                 var row = table.querySelector('.kw-app-row[data-id="' + id + '"]');
                 var progressCell = row ? row.querySelector('[data-progress-cell]') : null;
                 if (progressCell) {
-                    progressCell.textContent = t('js.updating');
+                    progressCell.textContent = t('js.update_requested');
                     progressCell.removeAttribute('title');
                 }
             });

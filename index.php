@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/inc/init.php';
 
 session_start();
+header('Content-Type: text/html; charset=utf-8');
 $database = new Database();
 $repository = new AppRepository($database);
 $settingsRepository = new SettingsRepository($database);
@@ -129,9 +130,13 @@ try {
         Support::redirect('index.php');
     }
     if ($action === 'save_settings') {
+        $previousLoginEnabled = !empty($settings['login_enabled']);
+        $previousLoginPasswordHash = (string)$settings['login_password_hash'];
         $settingsRepository->save($_POST['settings'] ?? []);
         $savedSettings = $settingsRepository->all();
-        if (!empty($savedSettings['login_enabled'])) {
+        $loginSettingsChanged = $previousLoginEnabled !== !empty($savedSettings['login_enabled'])
+            || !hash_equals($previousLoginPasswordHash, (string)$savedSettings['login_password_hash']);
+        if (!empty($savedSettings['login_enabled']) && $loginSettingsChanged) {
             unset($_SESSION['kw_authenticated']);
         }
         $savedI18n = new I18n((string)(($_POST['settings'] ?? [])['language'] ?? $settings['language']));
@@ -167,10 +172,18 @@ try {
     }
     if ($action === 'bulk_update') {
         session_write_close();
-        $ids = array_filter(array_map('intval', explode(',', (string)($_POST['ids'] ?? ''))));
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', explode(',', (string)($_POST['ids'] ?? ''))),
+            static fn (int $id): bool => $id > 0,
+        )));
+        $repository->markUpdateRequested($ids);
         $count = 0;
         foreach ($ids as $id) {
-            $updater->run($id, true);
+            try {
+                $updater->run($id, true);
+            } catch (Throwable) {
+                // Updater::run() already persists the application-specific error.
+            }
             $count++;
         }
         $flashBag->set($t('flash.applications_updated', ['count' => $count]));
@@ -183,7 +196,9 @@ try {
     }
     if ($action === 'check' || $action === 'download' || $action === 'force') {
         session_write_close();
-        $updater->run((int)$_POST['id'], $action !== 'check', $action === 'force');
+        $id = (int)$_POST['id'];
+        $repository->markUpdateRequested([$id], $action !== 'force');
+        $updater->run($id, $action !== 'check', $action === 'force');
         $flashBag->set($action === 'check' ? $t('flash.check_completed') : $t('flash.download_completed'));
         Support::redirect();
     }
@@ -226,9 +241,11 @@ $jsI18n = $i18n->subset([
     'table.just_notify',
     'js.no_bash_script',
     'js.updating',
+    'js.update_requested',
     'js.download',
     'js.remaining',
     'js.download_running',
+    'status.current',
     'browser.loading',
     'browser.computer',
     'browser.no_bookmarks',
@@ -344,12 +361,23 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
                     <tr class="kw-date-row"><td colspan="7"><?= Support::h($group) ?></td></tr>
                 <?php endif; ?>
                 <?php $statusIcon = $app['error'] ? 'error' : (string)$app['status']; ?>
+                <?php $statusIconClass = preg_replace('/[^A-Za-z0-9_-]+/', '-', $statusIcon) ?: 'new'; ?>
                 <?php $hasCommandScript = trim((string)($app['command_script'] ?? '')) !== ''; ?>
                 <?php $commandEnabled = $hasCommandScript && !empty($app['command_enabled']); ?>
                 <tr class="kw-app-row <?= $app['enabled'] ? '' : 'kw-app-disabled' ?>" data-id="<?= (int)$app['id'] ?>" data-edit="index.php?edit=<?= (int)$app['id'] ?>" data-vars="index.php?variables=<?= (int)$app['id'] ?>" data-command="<?= !empty($app['command_enabled']) && trim((string)($app['command_script'] ?? '')) !== '' ? '1' : '0' ?>" data-website="<?= Support::h($app['website'] ?? '') ?>">
-                    <td><span class="kw-status kw-status-<?= Support::h($statusIcon) ?>" data-status-icon></span><?= Support::h($app['name']) ?></td>
+                    <td><span class="kw-status kw-status-<?= Support::h($statusIconClass) ?>" data-status-icon></span><?= Support::h($app['name']) ?></td>
                     <td data-updated-cell><?= $displayUpdated ? Support::h(date('d.m.Y H:i', strtotime($displayUpdated))) : '' ?></td>
-                    <td data-progress-cell><?= Support::h($app['error'] ?: $app['status']) ?></td>
+                    <?php
+                    $progress = (string)($app['error'] ?: $app['status']);
+                    if ($progress === 'update requested') {
+                        $progress = $t('js.update_requested');
+                    } elseif ($progress === 'updating') {
+                        $progress = $t('js.updating');
+                    } elseif ($progress === 'current') {
+                        $progress = $t('status.current');
+                    }
+                    ?>
+                    <td data-progress-cell><?= Support::h($progress) ?></td>
                     <?php $targetText = ($app['update_mode'] ?? 'download') === 'notify' ? $t('table.just_notify') : ((($app['target_type'] ?? 'file') === 'folder' && $app['current_target_path']) ? $app['current_target_path'] : $app['target_path']); ?>
                     <td data-target-cell><?= Support::h($targetText) ?></td>
                     <td data-category-cell><?= Support::h($app['category']) ?></td>

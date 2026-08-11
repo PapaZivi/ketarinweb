@@ -51,8 +51,8 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
 .kw-status-error { background: #b73a33; border-color: #8d211b; }
 .kw-status-error::before, .kw-status-error::after { content: ""; position: absolute; left: 3px; top: 6px; width: 8px; height: 2px; background: #fff; border: 0; transform: rotate(45deg); }
 .kw-status-error::after { transform: rotate(-45deg); }
-.kw-status-new, .kw-status-update-found { background: #f2c84b; border-color: #b89118; }
-.kw-status-new::after, .kw-status-update-found::after { content: "!"; left: 0; top: -1px; width: 100%; height: 100%; border: 0; color: #6e5300; font: bold 12px/14px Arial, Helvetica, sans-serif; text-align: center; transform: none; }
+.kw-status-new, .kw-status-update-found, .kw-status-update-requested { background: #f2c84b; border-color: #b89118; }
+.kw-status-new::after, .kw-status-update-found::after, .kw-status-update-requested::after { content: "!"; left: 0; top: -1px; width: 100%; height: 100%; border: 0; color: #6e5300; font: bold 12px/14px Arial, Helvetica, sans-serif; text-align: center; transform: none; }
 .kw-status-updating { background: #2186d9; border-color: #0868b3; }
 .kw-status-updating::after { left: 5px; top: 5px; width: 4px; height: 4px; border: 0; border-radius: 50%; background: #fff; transform: none; animation: kwPulse .9s infinite alternate; }
 .kw-status-downloading { background: #2186d9; border-color: #0868b3; }
