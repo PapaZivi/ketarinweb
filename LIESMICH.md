@@ -20,6 +20,7 @@ Webserver, SQLite und Cronjobs.
 - Bash-Command je Anwendung nach erfolgreichem Download
 - Separater Command-Cron mit atomarem Job-Claiming
 - E-Mail-Benachrichtigung über PHP `mail()`
+- Tägliche Eigenversionsprüfung gegen die offiziellen GitHub-Releases
 - Dateibrowser mit Lesezeichen für lokale Zielpfade
 - Internationalisierte Oberfläche mit JSON-Sprachdateien in `lang/`
 
@@ -95,6 +96,11 @@ Ausstehende Bash-Commands einmal pro Minute ausführen:
 
 Cronjobs sind standardmäßig ruhig und geben nur bei Fehlern etwas aus. Mit
 `--verbose` oder `-v` werden normale Statuszeilen ausgegeben.
+
+Der vollständige tägliche Lauf prüft zusätzlich das offizielle KetarinWeb-
+Repository auf ein neueres Release. Eine neue KetarinWeb-Version wird einmalig
+in die konfigurierte Update-E-Mail aufgenommen und bleibt oberhalb der
+Anwendungsliste sichtbar. Die Anwendung aktualisiert ihre Dateien nicht selbst.
 
 ## Author
 

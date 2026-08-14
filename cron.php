@@ -15,6 +15,7 @@ $verbose = in_array('--verbose', $argv, true) || in_array('-v', $argv, true);
 $repository = new AppRepository(new Database());
 $settingsRepository = new SettingsRepository(new Database());
 $updater = new Updater($repository, new HttpClient());
+$selfUpdateChecker = new SelfUpdateChecker(new HttpClient(), $settingsRepository);
 $ids = [];
 foreach (array_slice($argv, 1) as $arg) {
     if (str_starts_with($arg, '--id=')) {
@@ -73,9 +74,24 @@ if ($commandsOnly) {
 } else {
     $updater->runAll($download, $recordResult);
 }
+$selfUpdateVersionToMark = '';
+if (!$commandsOnly && $ids === []) {
+    try {
+        $selfUpdateResult = $selfUpdateChecker->check();
+        $recordResult($selfUpdateResult);
+        if (($selfUpdateResult['status'] ?? '') === 'update-found' && ($selfUpdateResult['notify'] ?? true)) {
+            $selfUpdateVersionToMark = (string)($selfUpdateResult['version'] ?? '');
+        }
+    } catch (Throwable $e) {
+        $recordResult(['status' => 'error', 'message' => 'KetarinWeb self-update check: ' . $e->getMessage()]);
+    }
+}
 if (!$commandsOnly) {
     $mailer = new Mailer($settingsRepository);
     if ($mailer->sendUpdateNotification($results)) {
         file_put_contents(KW_DATA . '/logs/cron.log', '[' . date('Y-m-d H:i:s') . '] mail update notification sent' . PHP_EOL, FILE_APPEND);
+        if ($selfUpdateVersionToMark !== '') {
+            $selfUpdateChecker->markNotified($selfUpdateVersionToMark);
+        }
     }
 }

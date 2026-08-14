@@ -136,6 +136,8 @@
                      "regex.multiline_help":  "^ und $ passen auf Zeilenanfang/-ende",
                      "regex.singleline":  "einzeilig",
                      "regex.singleline_help":  "Punkt passt auch auf Zeilenumbrüche",
+                     "self_update.available":  "KetarinWeb {version} ist verfügbar.",
+                     "self_update.open_release":  "Release anzeigen",
                      "settings.double_click":  "Doppelklick",
                      "settings.file_browser_action":  "Dateibrowser-Aktion",
                      "settings.file_browser_hint":  "Steuert Verzeichniswechsel und finale Dateiauswahl im Dateibrowser.",

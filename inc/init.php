@@ -16,6 +16,7 @@ require __DIR__ . '/HttpClient.php';
 require __DIR__ . '/AppRepository.php';
 require __DIR__ . '/SettingsRepository.php';
 require __DIR__ . '/Mailer.php';
+require __DIR__ . '/SelfUpdateChecker.php';
 require __DIR__ . '/Updater.php';
 require __DIR__ . '/KetarinImporter.php';
 

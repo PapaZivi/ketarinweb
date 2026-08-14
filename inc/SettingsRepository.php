@@ -19,6 +19,8 @@ final class SettingsRepository
             'language' => I18n::normalizeLocale((string)($rows['language'] ?? 'en_US')),
             'login_enabled' => (string)($rows['login_enabled'] ?? '0') === '1' && $loginPasswordHash !== '',
             'login_password_hash' => $loginPasswordHash,
+            'self_update_available_url' => (string)($rows['self_update_available_url'] ?? ''),
+            'self_update_available_version' => (string)($rows['self_update_available_version'] ?? ''),
         ];
     }
 
@@ -48,5 +50,30 @@ final class SettingsRepository
         }
         $stmt->execute(['login_enabled', $loginEnabled]);
         $stmt->execute(['login_password_hash', $passwordHash]);
+    }
+
+    public function selfUpdateNotifiedVersion(): string
+    {
+        $statement = $this->database->pdo()->prepare('SELECT value FROM settings WHERE key = ?');
+        $statement->execute(['self_update_notified_version']);
+        return (string)($statement->fetchColumn() ?: '');
+    }
+
+    public function markSelfUpdateNotified(string $version): void
+    {
+        $this->database->pdo()->prepare('
+            INSERT INTO settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        ')->execute(['self_update_notified_version', $version]);
+    }
+
+    public function setSelfUpdateAvailable(string $version, string $url): void
+    {
+        $statement = $this->database->pdo()->prepare('
+            INSERT INTO settings (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+        ');
+        $statement->execute(['self_update_available_version', $version]);
+        $statement->execute(['self_update_available_url', $url]);
     }
 }

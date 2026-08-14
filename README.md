@@ -20,6 +20,7 @@ SQLite and cron jobs.
 - Per-application Bash command queued after successful downloads
 - Separate command cron with atomic job claiming
 - Email notification via PHP `mail()`
+- Daily self-update check against the official KetarinWeb GitHub releases
 - File browser with bookmarks for choosing local target paths
 - Internationalized user interface with JSON language files in `lang/`
 
@@ -95,6 +96,11 @@ Run queued Bash commands once per minute:
 
 Cron output is quiet by default. It prints only when an error happens. Add
 `--verbose` or `-v` to print normal status lines.
+
+The full daily run also checks the official KetarinWeb repository for a newer
+release. A newer KetarinWeb version is included in the configured update email
+once and remains visible above the application grid. Application files are not
+changed automatically.
 
 ## Author
 

@@ -229,6 +229,12 @@ $sort = (string)($_GET['sort'] ?? 'date');
 $direction = strtolower((string)($_GET['dir'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
 $apps = $repository->all($sort, $direction);
 $writableIssues = RuntimeRequirements::writableIssues($apps);
+$selfUpdateAvailableVersion = (string)$settings['self_update_available_version'];
+$selfUpdateAvailable = preg_match('/^\d{4}\.\d{2}(?:\.\d+)?$/', $selfUpdateAvailableVersion)
+    && version_compare($selfUpdateAvailableVersion, KW_VERSION, '>');
+$selfUpdateAvailableUrl = filter_var($settings['self_update_available_url'], FILTER_VALIDATE_URL)
+    ? (string)$settings['self_update_available_url']
+    : 'https://github.com/PapaZivi/ketarinweb/releases/latest';
 $flash = $flashBag->pull();
 $languages = I18n::available();
 $jsI18n = $i18n->subset([
@@ -339,6 +345,13 @@ $sortLink = static function (string $column, string $label) use ($sort, $directi
         </div>
         <?php endif; ?>
     </section>
+
+    <?php if ($selfUpdateAvailable): ?>
+        <section class="kw-self-update-notice" role="status">
+            <span><?= Support::h($t('self_update.available', ['version' => $selfUpdateAvailableVersion])) ?></span>
+            <a href="<?= Support::h($selfUpdateAvailableUrl) ?>" target="_blank" rel="noopener noreferrer"><?= Support::h($t('self_update.open_release')) ?></a>
+        </section>
+    <?php endif; ?>
 
     <section class="kw-grid">
         <table class="kw-table" id="appTable">

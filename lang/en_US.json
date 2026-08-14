@@ -136,6 +136,8 @@
                      "regex.multiline_help":  "^ and $ match start/end of line",
                      "regex.singleline":  "single line",
                      "regex.singleline_help":  "Dot matches newline",
+                     "self_update.available":  "KetarinWeb {version} is available.",
+                     "self_update.open_release":  "View release",
                      "settings.double_click":  "Double click",
                      "settings.file_browser_action":  "File browser action",
                      "settings.file_browser_hint":  "Controls folder navigation and final file selection in the file browser.",

@@ -10,7 +10,8 @@ final class Mailer
     public function sendUpdateNotification(array $results): bool
     {
         $updates = array_values(array_filter($results, static function (array $result): bool {
-            return in_array($result['status'] ?? '', ['update-found', 'downloaded'], true);
+            return in_array($result['status'] ?? '', ['update-found', 'downloaded'], true)
+                && ($result['notify'] ?? true) !== false;
         }));
         if ($updates === []) {
             return false;

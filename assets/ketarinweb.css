@@ -19,6 +19,8 @@ body { margin: 0; font: 12px Arial, Helvetica, sans-serif; color: #000; backgrou
 .kw-commandbar { min-height: 42px; background: #f7f9fc; border: 1px solid #aeb8c6; box-shadow: 0 1px 2px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; }
 .kw-commandbar strong { font-size: 13px; }
 .kw-commandbar span { margin-left: 8px; color: #5c6470; }
+.kw-self-update-notice { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 9px; color: #594500; background: #fff6cf; border: 1px solid #d2b449; }
+.kw-self-update-notice a { color: #075ca8; white-space: nowrap; }
 .kw-grid { flex: 1; overflow: auto; background: #fff; border: 1px solid #aeb8c6; box-shadow: 0 1px 3px rgba(0,0,0,.08); user-select: none; -webkit-user-select: none; }
 .kw-grid ::selection { background: transparent; }
 .kw-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
