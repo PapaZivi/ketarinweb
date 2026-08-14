@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -37,23 +37,33 @@ jobs:
             echo "Invalid KW_VERSION: $version" >&2
             exit 1
           fi
+          tag="v$version"
 
-          if gh release view "$version" >/dev/null 2>&1; then
-            echo "Release $version already exists."
-            exit 0
+          release_exists=false
+          if gh release view "$tag" >/dev/null 2>&1; then
+            release_exists=true
           fi
 
-          if ! git rev-parse --verify --quiet "refs/tags/$version" >/dev/null; then
-            git tag -a "$version" -m "KetarinWeb $version"
-            git push origin "$version"
+          if ! git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$tag" -m "KetarinWeb $version"
+            git push origin "$tag"
           fi
 
           archive_prefix="ketarinweb-$version/"
-          git archive --format=zip --prefix="$archive_prefix" -o "ketarinweb-$version.zip" "$version"
-          git archive --format=tar --prefix="$archive_prefix" "$version" | gzip -9 > "ketarinweb-$version.tar.gz"
+          git archive --format=zip --prefix="$archive_prefix" -o "ketarinweb-$version.zip" "$tag"
+          git archive --format=tar --prefix="$archive_prefix" "$tag" | gzip -9 > "ketarinweb-$version.tar.gz"
 
-          gh release create "$version" \
-            "ketarinweb-$version.zip" \
-            "ketarinweb-$version.tar.gz" \
-            --title "KetarinWeb $version" \
-            --generate-notes
+          if [[ "$release_exists" == true ]]; then
+            gh release upload "$tag" \
+              "ketarinweb-$version.zip" \
+              "ketarinweb-$version.tar.gz" \
+              --clobber
+          else
+            gh release create "$tag" \
+              "ketarinweb-$version.zip" \
+              "ketarinweb-$version.tar.gz" \
+              --title "KetarinWeb $version" \
+              --generate-notes
+          fi
