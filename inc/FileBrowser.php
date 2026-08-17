@@ -18,14 +18,8 @@ final class FileBrowser
             ];
         }
 
-        $realPath = realpath($path);
-        if ($realPath !== false && is_file($realPath)) {
-            $realPath = dirname($realPath);
-        }
-        if ($realPath === false) {
-            $parent = dirname($path);
-            $realPath = realpath($parent);
-        }
+        $realPath = $this->closestExistingDirectory($path);
+
         if ($realPath === false || !is_dir($realPath)) {
             throw new RuntimeException('Folder not found.');
         }
@@ -103,6 +97,26 @@ final class FileBrowser
         return $this->pdo()
             ->query('SELECT id, name, path FROM file_bookmarks ORDER BY name COLLATE NOCASE')
             ->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    private function closestExistingDirectory(string $path): string|false
+    {
+        $candidate = $path;
+
+        while ($candidate !== '') {
+            $realPath = realpath($candidate);
+            if ($realPath !== false) {
+                return is_dir($realPath) ? $realPath : dirname($realPath);
+            }
+
+            $parent = dirname($candidate);
+            if ($parent === $candidate || $parent === '.') {
+                break;
+            }
+            $candidate = $parent;
+        }
+
+        return false;
     }
 
     private function pdo(): PDO
